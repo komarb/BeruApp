@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func getItemsRelevantInfo(w http.ResponseWriter, r *http.Request) {
@@ -67,15 +68,6 @@ func getOrderAcceptanceStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if acceptOrder {
-		err := reserveItems(inputOrder.Order.Items)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"function" : "reserveItems",
-				"handler" : "getOrderAcceptanceStatus",
-				"err" : err,
-			},
-			).Fatal("Can't reserve item, declining an order")
-		}
 		replyOrder.Order.ID = strconv.FormatInt(inputOrder.Order.ID, 10)
 		replyOrder.Order.Accepted = true
 
@@ -119,26 +111,20 @@ func sendShipmentsInfo(inputOrder models.AcceptOrderRequest) {
 			}
 		}
 	}
-	fmt.Printf("%#v", shipment)
-	/*URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%d/delivery/shipments/%d/boxes.json",
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%d/delivery/shipments/%d/boxes.json",
 		cfg.Beru.CampaignID, inputOrder.Order.ID, inputOrder.Order.Delivery.Shipments[0].ID)
-	req, err := http.NewRequest("PUT", URL, nil)*/
+
+	DoAuthRequestWithObj("PUT", URL, shipment)
 }
 
 func getOpenOrders() string {
 	var inputOrders models.OpenOrdersRequest
 	var resultMsg string
-	//URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
-	URL := "https://pastebin.com/raw/h0ZSNHr1"
-	req, err := http.Get(URL)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"function" : "getOpenOrders",
-		},
-		).Warn("Can't retrieve open orders!")
-	}
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
+	//URL := "https://pastebin.com/raw/h0ZSNHr1"
+	resp := DoAuthRequest("GET", URL, nil)
 
-	json.NewDecoder(req.Body).Decode(&inputOrders)
+	json.NewDecoder(resp.Body).Decode(&inputOrders)
 	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", len(inputOrders.Orders))
 	for _, order := range inputOrders.Orders {
 		resultMsg += fmt.Sprintf("*Заказ №%d*\nПодробнее о заказе: /order%d\n\n", order.ID, order.ID)
@@ -149,24 +135,58 @@ func getOpenOrders() string {
 func getOpenOrder() string {
 	var inputOrder models.AcceptOrderRequest
 	var resultMsg string
-	//orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
-	orderURL := "https://pastebin.com/raw/48FvKiq9"
-	req, err := http.Get(orderURL)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"function" : "getOpenOrder",
-		},
-		).Warn("Can't retrieve order by ID!")
-	}
-	json.NewDecoder(req.Body).Decode(&inputOrder)
+	orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
+	//orderURL := "https://pastebin.com/raw/48FvKiq9"
+	resp := DoAuthRequest("GET", orderURL, nil)
+	json.NewDecoder(resp.Body).Decode(&inputOrder)
 
 	labelsURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%d/delivery/labels.json", cfg.Beru.CampaignID, inputOrder.Order.ID)
 	resultMsg = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
-	//resultMsg += fmt.Sprintf("*Статус заказа: %s, субстатус: %s\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
+	resultMsg += fmt.Sprintf("*Статус заказа: %s, субстатус: %s\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
 	for i, item := range inputOrder.Order.Items {
 		resultMsg += fmt.Sprintf("_Товар №%d:_\nOfferID товара: `%s`\nКоличество: `%d`\nЦена за шутку: `%.2f`\n", i+1, item.OfferID, item.Count, item.Price)
 	}
 	resultMsg += fmt.Sprintf("*Информация о доставке:*\nID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
 	resultMsg += fmt.Sprintf("*Ссылка на скачивание ярлыков-наклеек на грузовые места:*\n%s", labelsURL)
 	return resultMsg
+}
+
+func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
+	var stocksRequest models.StocksRequest
+	var stocksResponse models.StocksResponse
+	var count int64
+	var updatedAt string
+
+	json.NewDecoder(r.Body).Decode(&stocksRequest)
+
+	err := db.Get(&updatedAt, "SELECT UPDATE_TIME FROM information_schema.tables WHERE TABLE_SCHEMA = 'xml2yml' AND TABLE_NAME = 'products'")
+	if err != nil {
+		log.WithFields(log.Fields{
+			"function": "db.Get",
+			"err":      err,
+		},
+		).Warn("Can't retrieve update time of products table")
+	}
+	updatedAt = strings.Replace(updatedAt, " ", "T", 1)
+	for _, sku := range stocksRequest.Skus {
+		var tempSku models.Skus
+		var tempItem models.StocksItems
+		err := db.Get(&count, "SELECT count FROM products WHERE shop_sku=?", sku)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"function" : "db.Get",
+			},
+			).Warn("Can't retrieve count of shop_sku, returning 0")
+			count = 0
+		}
+		tempSku.Sku = sku
+		tempSku.WarehouseID = stocksRequest.WarehouseID
+
+		tempItem.UpdatedAt = updatedAt
+		tempItem.Count = count
+		tempItem.Type = "FIT"
+		tempSku.Items = append(tempSku.Items, tempItem)
+		stocksResponse.Skus = append(stocksResponse.Skus, tempSku)
+	}
+	json.NewEncoder(w).Encode(stocksResponse)
 }

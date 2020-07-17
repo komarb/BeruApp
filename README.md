@@ -15,13 +15,20 @@ File ```src/ITLabReports/api/config.json``` must contain next content:
     "dbName" : "DB table name"
   },
   "AppOptions": {
-    "appPort": "8080"
+    "appPort": "8080",
+    "daemonMode": false | true,
+    "httpsMode": false | true,
+    "crtDir" : "path to certificate",
+    "keyDir" : "path to key"
   },
   "BotOptions": {
     "apiToken": "API token for Telegram bot"
   },
   "BeruOptions": {
-    "campaignId" : "Campaign ID from profile"
+    "oauthToken" : "Yandex App OAuth Token",
+    "oauthClientId": "Yandex App client ID",
+    "apiToken": "Beru API token",
+    "campaignId" : "Beru Campaign ID from profile"
   }
 }
 ```
