@@ -22,12 +22,19 @@ type DBConfig struct {
 }
 type AppConfig struct {
 	AppPort		string	`json:"appPort"`
+	DaemonMode	bool 	`json:"daemonMode"`
+	HttpsMode	bool	`json:"httpsMode"`
+	CrtDir		string	`json:"crtDir"`
+	KeyDir		string	`json:"keyDir"`
 }
 type BotConfig struct {
 	ApiToken	string	`json:"apiToken"`
 }
 type BeruConfig struct {
+	ApiToken	string	`json:"apiToken"`
 	CampaignID	string	`json:"campaignId"`
+	OAuthToken  string	`json:"oauthToken"`
+	OAuthClientID  string	`json:"oauthClientId"`
 }
 
 func GetConfig() *Config {
