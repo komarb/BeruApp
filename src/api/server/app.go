@@ -5,6 +5,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/jmoiron/sqlx"
+	"github.com/sevlyar/go-daemon"
 	log "github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/mongo"
 	"net/http"
@@ -37,7 +38,26 @@ func (a *App) Run(addr string) {
 	log.WithField("port", cfg.App.AppPort).Info("Starting server on port:")
 	log.Info("Now handling routes!")
 
-	err := http.ListenAndServe(addr, a.Router)
+	cntxt := &daemon.Context{
+		PidFileName: "beruapp.pid",
+		PidFilePerm: 0644,
+		LogFileName: "beruapp.log",
+		LogFilePerm: 0640,
+		WorkDir:     "./",
+		Umask:       027,
+	}
+	d, err := cntxt.Reborn()
+	if err != nil {
+		log.Fatal("Unable to run: ", err)
+	}
+	if d != nil {
+		return
+	}
+	defer cntxt.Release()
+
+	log.Info("Daemon started!")
+
+	err = http.ListenAndServe(addr, a.Router)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"function" : "http.ListenAndServe",
