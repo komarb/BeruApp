@@ -180,6 +180,7 @@ func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
 		).Warn("Can't retrieve update time of products table")
 	}
 	updatedAt = strings.Replace(updatedAt, " ", "T", 1)
+	updatedAt += "+03:00"
 	for _, sku := range stocksRequest.Skus {
 		var tempSku models.Skus
 		var tempItem models.StocksItems
