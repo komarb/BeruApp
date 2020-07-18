@@ -4,6 +4,7 @@ import (
 	"beruAPI/models"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 func getItemsDimensions(items []models.Items) {
@@ -47,4 +48,19 @@ func addBoxToShipment(item models.Items, shipment *models.Shipment, orderID int6
 
 func getIdFromMsg(msg string) string {
 	return msg[6:]
+}
+
+func initPeriodicUpdate() {
+	t := time.Now()
+	n := time.Date(t.Year(), t.Month(), t.Day(), 19, 30, 0, 0, t.Location())
+	d := n.Sub(t)
+	if d < 0 {
+		n = n.Add(24 * time.Hour)
+		d = n.Sub(t)
+	}
+	for {
+		time.Sleep(d)
+		d = 24 * time.Hour
+		UpdateStatusToShipped()
+	}
 }

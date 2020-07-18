@@ -24,17 +24,23 @@ func (a *App) Init(config *config.Config) {
 	httpClient = createHTTPClient()
 	initDB()
 	go runBot()
+	go initPeriodicUpdate()
 	a.Router = mux.NewRouter()
 	a.setRouters()
 }
 
 func (a *App) setRouters() {
-	a.Router.Use(loggingMiddleware)
+	public := a.Router.PathPrefix("/download").Subrouter()
+	public.Use(loggingMiddleware)
+	public.HandleFunc("/act", downloadActHand).Methods("GET")
+	public.HandleFunc("/labels/{orderId}", downloadLabelsHand).Methods("GET")
 
-	a.Router.HandleFunc("/stocks", sendStocksInfo).Methods("POST")
-	a.Router.HandleFunc("/cart", getItemsRelevantInfo).Methods("POST")
-	a.Router.HandleFunc("/order/accept", getOrderAcceptanceStatus).Methods("POST")
-	a.Router.HandleFunc("/order/status", changeOrderStatus).Methods("POST")
+	private := a.Router.PathPrefix("/api").Subrouter()
+	private.Use(authMiddleware)
+	private.HandleFunc("/stocks", sendStocksInfo).Methods("POST")
+	private.HandleFunc("/cart", getItemsRelevantInfo).Methods("POST")
+	private.HandleFunc("/order/accept", getOrderAcceptanceStatus).Methods("POST")
+	private.HandleFunc("/order/status", getOrderStatus).Methods("POST")
 }
 
 func (a *App) Run(addr string) {

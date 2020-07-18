@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func loggingMiddleware(next http.Handler) http.Handler {
+func authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sw := logging.NewStatusWriter(w)
 		sw.Header().Set("Content-Type", "application/json")
@@ -13,6 +13,14 @@ func loggingMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}
+		next.ServeHTTP(sw, r)
+		logging.LogHandler(sw, r)
+	})
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sw := logging.NewStatusWriter(w)
 		next.ServeHTTP(sw, r)
 		logging.LogHandler(sw, r)
 	})

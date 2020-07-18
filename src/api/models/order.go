@@ -53,3 +53,10 @@ type ReplyOrder struct {
 	ID       string `json:"id,omitempty"`
 	Reason   string `json:"reason,omitempty"`
 }
+type OrderStatusRequest struct {
+	Order		OrderStatus		`json:"order"`
+}
+type OrderStatus struct {
+	Status		  string	`json:"status"`
+	Substatus	  string	`json:"substatus"`
+}

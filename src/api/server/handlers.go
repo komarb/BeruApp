@@ -2,12 +2,17 @@ package server
 
 import (
 	"beruAPI/models"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func getItemsRelevantInfo(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +89,7 @@ func getOrderAcceptanceStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(replyOrder)
 }
 
-func changeOrderStatus(w http.ResponseWriter, r *http.Request) {
+func getOrderStatus(w http.ResponseWriter, r *http.Request) {
 	var inputOrder models.AcceptOrderRequest
 
 	json.NewDecoder(r.Body).Decode(&inputOrder)
@@ -92,6 +97,7 @@ func changeOrderStatus(w http.ResponseWriter, r *http.Request) {
 	switch inputOrder.Order.Substatus {
 	case "STARTED":
 		sendShipmentsInfo(inputOrder)
+		sendStatus("PROCESSING", "READY_TO_SHIP", strconv.FormatInt(inputOrder.Order.ID, 10))
 		msg := fmt.Sprintf("*Заказ №%d* передан в обработку - его можно начинать подготавливать\nПодробнее о заказе: /order%d", inputOrder.Order.ID, inputOrder.Order.ID)
 		sendMessageToClients(msg)
 	}
@@ -120,35 +126,41 @@ func sendShipmentsInfo(inputOrder models.AcceptOrderRequest) {
 func getOpenOrders() string {
 	var inputOrders models.OpenOrdersRequest
 	var resultMsg string
-	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
-	//URL := "https://pastebin.com/raw/h0ZSNHr1"
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json?status=PROCESSING", cfg.Beru.CampaignID)
 	resp := DoAuthRequest("GET", URL, nil)
 
 	json.NewDecoder(resp.Body).Decode(&inputOrders)
 	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", len(inputOrders.Orders))
 	for _, order := range inputOrders.Orders {
-		resultMsg += fmt.Sprintf("*Заказ №%d*\nПодробнее о заказе: /order%d\n\n", order.ID, order.ID)
+		resultMsg += fmt.Sprintf("*Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n", order.ID, order.Status, order.Substatus, order.ID)
 	}
 	return resultMsg
 }
 
-func getOpenOrder() string {
+func getOpenOrder(orderID string, chatID int64) {
 	var inputOrder models.AcceptOrderRequest
-	var resultMsg string
-	orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json", cfg.Beru.CampaignID)
-	//orderURL := "https://pastebin.com/raw/48FvKiq9"
+	var msgText string
+	orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s.json", cfg.Beru.CampaignID, orderID)
 	resp := DoAuthRequest("GET", orderURL, nil)
 	json.NewDecoder(resp.Body).Decode(&inputOrder)
-
-	labelsURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%d/delivery/labels.json", cfg.Beru.CampaignID, inputOrder.Order.ID)
-	resultMsg = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
-	resultMsg += fmt.Sprintf("*Статус заказа: %s, субстатус: %s\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
-	for i, item := range inputOrder.Order.Items {
-		resultMsg += fmt.Sprintf("_Товар №%d:_\nOfferID товара: `%s`\nКоличество: `%d`\nЦена за шутку: `%.2f`\n", i+1, item.OfferID, item.Count, item.Price)
+	if resp.StatusCode == 404 || resp.StatusCode == 403 || inputOrder.Order.ID == 0{
+		msgText = "Заказ с таким ID *не найден*"
+	} else {
+		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
+		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
+		for i, item := range inputOrder.Order.Items {
+			msgText += fmt.Sprintf("_Товар №%d:_\nOfferID товара: `%s`\nКоличество: `%d`\nЦена за шутку: `%.2f`\n", i+1, item.OfferID, item.Count, item.Price)
+		}
+		msgText += fmt.Sprintf("*Информация о доставке:*\nID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
+		msgText += fmt.Sprintf("*Ссылка на скачивание ярлыков-наклеек на грузовые места:*\n/label%d", inputOrder.Order.ID)
 	}
-	resultMsg += fmt.Sprintf("*Информация о доставке:*\nID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
-	resultMsg += fmt.Sprintf("*Ссылка на скачивание ярлыков-наклеек на грузовые места:*\n%s", labelsURL)
-	return resultMsg
+
+	msg := tgbotapi.NewMessage(chatID, msgText)
+	msg.ParseMode = "markdown"
+	if inputOrder.Order.Substatus == "STARTED" || inputOrder.Order.Substatus == "READY_TO_SHIP" {
+		msg.ReplyMarkup = orderControlKeyboard
+	}
+	bot.Send(msg)
 }
 
 func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
@@ -189,4 +201,50 @@ func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
 		stocksResponse.Skus = append(stocksResponse.Skus, tempSku)
 	}
 	json.NewEncoder(w).Encode(stocksResponse)
+}
+
+func downloadActHand(w http.ResponseWriter, r *http.Request) {
+	actURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/shipments/reception-transfer-act.json", cfg.Beru.CampaignID)
+	resp := DoAuthRequest("GET", actURL, nil)
+	if resp.StatusCode == 404 {
+		w.Write([]byte("Заказов, готовых к отправке сегодня не найдено"))
+	} else {
+		io.Copy(w, resp.Body)
+	}
+}
+
+func downloadLabelsHand(w http.ResponseWriter, r *http.Request) {
+	data := mux.Vars(r)
+	orderId := data["orderId"]
+	labelsURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s/delivery/labels.json", cfg.Beru.CampaignID, orderId)
+	resp := DoAuthRequest("GET", labelsURL, nil)
+	if resp.StatusCode == 404 {
+		w.Write([]byte("Заказ с указанным идентификатором не найден"))
+	} else {
+		io.Copy(w, resp.Body)
+	}
+}
+
+func sendStatus(status string, substatus string, orderID string) *http.Response {
+	var orderStatus models.OrderStatusRequest
+	orderStatus.Order.Status = status
+	orderStatus.Order.Substatus = substatus
+	json, _ := json.Marshal(orderStatus)
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s/status.json", cfg.Beru.CampaignID, orderID)
+	resp := DoAuthRequest("PUT", URL, bytes.NewBuffer(json))
+	return resp
+}
+
+func UpdateStatusToShipped() {
+	var readytoshipOrders models.OpenOrdersRequest
+	date := time.Now().Format("02-01-2006")
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/" +
+		"orders.json?status=PROCESSING&substatus=READY_TO_SHIP" +
+		"&supplierShipmentDateFrom=%s&supplierShipmentDateTo=%s", cfg.Beru.CampaignID, date, date)
+	resp := DoAuthRequest("GET", URL, nil)
+	json.NewDecoder(resp.Body).Decode(&readytoshipOrders)
+
+	for _, order := range readytoshipOrders.Orders {
+		sendStatus("PROCESSING", "SHIPPED", strconv.FormatInt(order.ID,10))
+	}
 }
