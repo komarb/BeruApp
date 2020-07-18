@@ -65,10 +65,6 @@ func (a *App) Run(addr string) {
 			return
 		}
 		defer cntxt.Release()
-
-		log.WithFields(log.Fields{
-			"PID"	:	d.Pid},
-		).Info("Daemon started!")
 	}
 	if cfg.App.HttpsMode {
 		err = http.ListenAndServeTLS(addr, cfg.App.CrtDir, cfg.App.KeyDir, a.Router)
