@@ -9,7 +9,7 @@ import (
 
 func getItemsDimensions(items []models.Items) {
 	for i, item := range items {
-		err := db.Get(&items[i], "SELECT box_length, box_height, box_width, box_weight FROM products WHERE offerId=?", item.OfferID)
+		err := db.Get(&items[i], "SELECT box_length, box_height, box_width, box_weight FROM products WHERE shop_sku=?", item.OfferID)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"function" : "sortItemsByVolume",

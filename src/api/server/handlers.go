@@ -23,7 +23,7 @@ func getItemsRelevantInfo(w http.ResponseWriter, r *http.Request) {
 	notInStock := 0
 	json.NewDecoder(r.Body).Decode(&inputCart)
 	for _, item := range inputCart.Cart.Items {
-		err := db.Get(&count, "SELECT count FROM products WHERE offerId=?", item.OfferId)
+		err := db.Get(&count, "SELECT count FROM products WHERE shop_sku=?", item.OfferId)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"function" : "db.Get",
@@ -54,7 +54,7 @@ func getOrderAcceptanceStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewDecoder(r.Body).Decode(&inputOrder)
 	for _, item := range inputOrder.Order.Items {
 		log.Info(item.OfferID)
-		err := db.Get(&count, "SELECT count FROM products WHERE offerId=?", item.OfferID)
+		err := db.Get(&count, "SELECT count FROM products WHERE shop_sku=?", item.OfferID)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"function" : "db.Get",
