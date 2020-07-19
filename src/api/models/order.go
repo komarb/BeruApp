@@ -60,3 +60,11 @@ type OrderStatus struct {
 	Status		  string	`json:"status"`
 	Substatus	  string	`json:"substatus"`
 }
+type MultipleOrderStatusRequest struct {
+	Orders		[]MultipleOrderStatus		`json:"orders"`
+}
+type MultipleOrderStatus struct {
+	ID			  int64	`json:"id"`
+	Status		  string	`json:"status"`
+	Substatus	  string	`json:"substatus"`
+}

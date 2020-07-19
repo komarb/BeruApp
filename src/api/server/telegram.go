@@ -53,13 +53,12 @@ func runBot() {
 		if update.CallbackQuery != nil {
 			switch update.CallbackQuery.Data {
 			case "confirmOrderCancellation":
-				confirmOrderCancelation(update.CallbackQuery.Message)
+				confirmOrderCancellation(update.CallbackQuery.Message)
 			case "undoOrderCancellation":
 				undoOrderCancellation(update.CallbackQuery.Message)
 			case "doOrderCancellation":
 				doOrderCancellation(update.CallbackQuery.Message)
 			}
-
 		} else if reflect.TypeOf(update.Message.Text).Kind() == reflect.String && update.Message.Text != "" {
 			switch update.Message.Text {
 			case "/start":
@@ -108,6 +107,8 @@ func runBot() {
 				bot.Send(msg)
 			case textDownloadAct:
 				downloadAct(update.Message.Chat.ID)
+			case "/shipAllOrders":
+				UpdateStatusToShipped()
 			default:
 				if strings.Contains(update.Message.Text, "/order") {
 					getOpenOrder(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
@@ -173,7 +174,7 @@ func downloadLabels(orderID string, chatID int64) {
 	}
 }
 
-func confirmOrderCancelation(msg *tgbotapi.Message) {
+func confirmOrderCancellation(msg *tgbotapi.Message) {
 	confirm := tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, confirmKeyboard)
 	bot.Send(confirm)
 }
@@ -184,15 +185,16 @@ func undoOrderCancellation(msg *tgbotapi.Message) {
 }
 
 func doOrderCancellation(msg *tgbotapi.Message) {
-	var statusMsg tgbotapi.MessageConfig
+	var statusMsgText string
 	i := strings.Index(msg.Text, "/label")
 	orderID := msg.Text[i+6:]
 	resp := sendStatus("CANCELLED", "SHOP_FAILED", orderID)
 	if resp.StatusCode != 200 {
-		statusMsg.Text = fmt.Sprintf("Беру ответил ошибкой, заказ %s *не был отменен*!", orderID)
+		statusMsgText = fmt.Sprintf("Беру ответил ошибкой, заказ %s *не был отменен*!", orderID)
 	} else {
-		statusMsg.Text = fmt.Sprintf("Заказ %s успешно *отменен*!", orderID)
+		statusMsgText= fmt.Sprintf("Заказ %s успешно *отменен*!", orderID)
 	}
+	statusMsg := tgbotapi.NewMessage(msg.Chat.ID, statusMsgText)
 	orderControl := tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, orderControlKeyboard)
 	bot.Send(orderControl)
 	statusMsg.ParseMode = "markdown"
