@@ -108,12 +108,14 @@ func runBot() {
 			case textDownloadAct:
 				downloadAct(update.Message.Chat.ID)
 			case "/shipAllOrders":
-				UpdateStatusToShipped()
+				UpdateStatusToShippedAll()
 			default:
 				if strings.Contains(update.Message.Text, "/order") {
 					getOpenOrder(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else if strings.Contains(update.Message.Text, "/label") {
 					downloadLabels(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
+				} else if strings.Contains(update.Message.Text, "/shpped") {
+					setShippedStatus(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else {
 					msgText := "Я вас не понимаю 😔 Отправьте команду /help для просмотра списка доступных команд"
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
@@ -197,6 +199,19 @@ func doOrderCancellation(msg *tgbotapi.Message) {
 	statusMsg := tgbotapi.NewMessage(msg.Chat.ID, statusMsgText)
 	orderControl := tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, orderControlKeyboard)
 	bot.Send(orderControl)
+	statusMsg.ParseMode = "markdown"
+	bot.Send(statusMsg)
+}
+
+func setShippedStatus(orderID string, chatID int64) {
+	var statusMsgText string
+	resp := sendStatus("PROCESSING", "SHIPPED", orderID)
+	if resp.StatusCode != 200 {
+		statusMsgText = fmt.Sprintf("Беру ответил ошибкой, статус SHIPPED заказа %s *не был установлен*!", orderID)
+	} else {
+		statusMsgText= fmt.Sprintf("Статус SHIPPED заказа %s успешно *установлен*!", orderID)
+	}
+	statusMsg := tgbotapi.NewMessage(chatID, statusMsgText)
 	statusMsg.ParseMode = "markdown"
 	bot.Send(statusMsg)
 }

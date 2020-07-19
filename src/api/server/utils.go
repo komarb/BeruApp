@@ -61,6 +61,6 @@ func initPeriodicUpdate() {
 	for {
 		time.Sleep(d)
 		d = 24 * time.Hour
-		UpdateStatusToShipped()
+		UpdateStatusToShippedAll()
 	}
 }

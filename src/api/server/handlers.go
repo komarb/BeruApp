@@ -243,7 +243,7 @@ func sendMultipleStatuses(orders models.MultipleOrderStatusRequest) *http.Respon
 	return resp
 }
 
-func UpdateStatusToShipped() {
+func UpdateStatusToShippedAll() {
 	var readytoshipOrders models.OpenOrdersRequest
 	var orders models.MultipleOrderStatusRequest
 	var tempOrder models.MultipleOrderStatus
@@ -267,4 +267,5 @@ func UpdateStatusToShipped() {
 	if len(orders.Orders) != 0 {
 		sendMultipleStatuses(orders)
 	}
+	log.Info("Statuses updates done successfully")
 }
