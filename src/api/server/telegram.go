@@ -114,7 +114,7 @@ func runBot() {
 					getOpenOrder(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else if strings.Contains(update.Message.Text, "/label") {
 					downloadLabels(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
-				} else if strings.Contains(update.Message.Text, "/shpped") {
+				} else if strings.Contains(update.Message.Text, "/shppd") {
 					setShippedStatus(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else {
 					msgText := "Я вас не понимаю 😔 Отправьте команду /help для просмотра списка доступных команд"
