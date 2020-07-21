@@ -8,6 +8,6 @@ import (
 func main() {
 	cfg := config.GetConfig()
 	app := &server.App{}
-	app.Init(cfg)
+	app.InitApp(cfg)
 	app.Run(":"+cfg.App.AppPort)
 }

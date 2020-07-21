@@ -37,6 +37,7 @@ type BeruConfig struct {
 	OAuthClientID  string	`json:"oauthClientId"`
 }
 
+// GetConfig открывает конфигурационный файл и извлекает из него информацию
 func GetConfig() *Config {
 	var config Config
 	data, err := ioutil.ReadFile("config.json")

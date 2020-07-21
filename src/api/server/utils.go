@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// getItemsDimensions запрашивает из БД информацию о размерах и весе всех заданных товаров
 func getItemsDimensions(items []models.Items) {
 	for i, item := range items {
 		err := db.Get(&items[i], "SELECT box_length, box_height, box_width, box_weight FROM products WHERE shop_sku=?", item.OfferID)
@@ -20,6 +21,8 @@ func getItemsDimensions(items []models.Items) {
 	}
 }
 
+// makeMultipleProductBox распределяет несколько товаров в одно грузовое место в зависимости
+// от самой короткой стороны коробки товара
 func makeMultipleProductBox(item *models.Items) {
 	switch {
 	case item.Length <= item.Height && item.Length <= item.Width:
@@ -32,10 +35,12 @@ func makeMultipleProductBox(item *models.Items) {
 	item.Weight = item.Weight * float32(item.Count)
 }
 
+// volume вычисляет обьем товара
 func volume(item models.Items) int {
 	return item.Length * item.Width * item.Height
 }
 
+// addBoxToShipment добавляет в грузовое отправление новое грузовое место
 func addBoxToShipment(item models.Items, shipment *models.Shipment, orderID int64) {
 	var tempBox models.Boxes
 	tempBox.Width = item.Width
@@ -46,10 +51,12 @@ func addBoxToShipment(item models.Items, shipment *models.Shipment, orderID int6
 	shipment.Boxes = append(shipment.Boxes, tempBox)
 }
 
+// getIdFromMsg возвращает ID из сообщения
 func getIdFromMsg(msg string) string {
 	return msg[6:]
 }
 
+// initPeriodicUpdate задает таймер для периодических задах и вызывает их в нужное время
 func initPeriodicUpdate() {
 	t := time.Now()
 	n := time.Date(t.Year(), t.Month(), t.Day(), 19, 30, 0, 0, t.Location())

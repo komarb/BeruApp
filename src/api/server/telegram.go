@@ -33,6 +33,8 @@ var confirmKeyboard = tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardButtonData("Оставить заказ","undoOrderCancellation"),
 	),
 )
+
+// runBot задает начальные параметры и запускает Телеграмм бота
 func runBot() {
 	var err error
 	bot, err = tgbotapi.NewBotAPI(cfg.Bot.ApiToken)
@@ -62,7 +64,11 @@ func runBot() {
 		} else if reflect.TypeOf(update.Message.Text).Kind() == reflect.String && update.Message.Text != "" {
 			switch update.Message.Text {
 			case "/start":
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я БеруБот, помогаю управлять заказами Беру. Чтобы подписаться на обновления, наберите команду '/subscribe'")
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Привет! Я БеруБот, помогаю управлять заказами Беру. " +
+					"Чтобы подписаться на обновления заказов и открыть меню управления, наберите команду '/subscribe'\n" +
+					"Чтобы отписаться от обновлений, наберите команду '/unsubscribe'\n" +
+					"Чтобы просмотреть подробную информацию о заказе, наберите '/order12345', где вместо 12345 - номер вашего заказа\n" +
+					"Чтобы вручную перевести заказ в статус 'передан службе доставки', наберите /shppd12345, где вместо 12345 - номер заказа, статус которого нужно изменить")
 				bot.Send(msg)
 			case "/subscribe":
 				isSubscribed, err := subscribeChatId(update.Message.Chat.ID)
@@ -111,13 +117,13 @@ func runBot() {
 				UpdateStatusToShippedAll()
 			default:
 				if strings.Contains(update.Message.Text, "/order") {
-					getOpenOrder(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
+					getOrderInfo(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else if strings.Contains(update.Message.Text, "/label") {
 					downloadLabels(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else if strings.Contains(update.Message.Text, "/shppd") {
 					setShippedStatus(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else {
-					msgText := "Я вас не понимаю 😔 Отправьте команду /help для просмотра списка доступных команд"
+					msgText := "Я вас не понимаю 😔 Отправьте команду /start для просмотра списка доступных команд"
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
 					msg.ParseMode = "markdown"
 					bot.Send(msg)
@@ -127,6 +133,8 @@ func runBot() {
 	}
 }
 
+// sendMessageToClients отправляет сообщение всем подписанным пользователям, ID которых
+// хранятся в БД
 func sendMessageToClients(msgText string) {
 	var clientsID []int64
 	err := db.Select(&clientsID, "SELECT * FROM bot_clients")
@@ -143,6 +151,8 @@ func sendMessageToClients(msgText string) {
 	}
 }
 
+// downloadAct скачивает акт приема-передачи на сегодняшнее число и отправляет его
+// в виде документа в чат пользователя, совершившего запрос
 func downloadAct(chatID int64) {
 	actURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/shipments/reception-transfer-act.json", cfg.Beru.CampaignID)
 	resp := DoAuthRequest("GET", actURL, nil)
@@ -159,6 +169,8 @@ func downloadAct(chatID int64) {
 	}
 }
 
+// downloadLabels скачивает файл с наклейками-ярлыками и отправляет его
+// в виде документа в чат пользователя, совершившего запрос
 func downloadLabels(orderID string, chatID int64) {
 	labelsURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s/delivery/labels.json", cfg.Beru.CampaignID, orderID)
 	resp := DoAuthRequest("GET", labelsURL, nil)
@@ -176,16 +188,19 @@ func downloadLabels(orderID string, chatID int64) {
 	}
 }
 
+// confirmOrderCancellation меняет шаблон кнопок для отмена заказа на подтверждающий "Удалить заказ/Оставить"
 func confirmOrderCancellation(msg *tgbotapi.Message) {
 	confirm := tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, confirmKeyboard)
 	bot.Send(confirm)
 }
 
+// undoOrderCancellation меняет шаблон кнопок для отмена заказа обратно на "Отменить заказ"
 func undoOrderCancellation(msg *tgbotapi.Message) {
 	orderControl := tgbotapi.NewEditMessageReplyMarkup(msg.Chat.ID, msg.MessageID, orderControlKeyboard)
 	bot.Send(orderControl)
 }
 
+// doOrderCancellation отправляет запрос на сервер Беру для отмены заказа
 func doOrderCancellation(msg *tgbotapi.Message) {
 	var statusMsgText string
 	i := strings.Index(msg.Text, "/label")
@@ -203,6 +218,7 @@ func doOrderCancellation(msg *tgbotapi.Message) {
 	bot.Send(statusMsg)
 }
 
+// setShippedStatus отправляет запрос на сервер Беру для установки статуса "SHIPPED"
 func setShippedStatus(orderID string, chatID int64) {
 	var statusMsgText string
 	resp := sendStatus("PROCESSING", "SHIPPED", orderID)

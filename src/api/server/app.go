@@ -19,7 +19,11 @@ type App struct {
 var cfg *config.Config
 var db *sqlx.DB
 var httpClient *http.Client
-func (a *App) Init(config *config.Config) {
+
+// InitApp инициализирует приложение - устанавливает соединение с БД, запускает телеграмм бота,
+// устанавливает конфигуационный файл и запускает функцию ежедневного обновления статуса
+// заказов из "READY_TO_SHIP" в "SHIPPED"
+func (a *App) InitApp(config *config.Config) {
 	cfg = config
 	httpClient = createHTTPClient()
 	initDB()
@@ -29,12 +33,9 @@ func (a *App) Init(config *config.Config) {
 	a.setRouters()
 }
 
+// setRouters указывает приложению, что делать, когда пользователь
+// перешел по определенному пути
 func (a *App) setRouters() {
-	public := a.Router.PathPrefix("/download").Subrouter()
-	public.Use(loggingMiddleware)
-	public.HandleFunc("/act", downloadActHand).Methods("GET")
-	public.HandleFunc("/labels/{orderId}", downloadLabelsHand).Methods("GET")
-
 	private := a.Router.PathPrefix("/api").Subrouter()
 	private.Use(authMiddleware)
 	private.HandleFunc("/stocks", sendStocksInfo).Methods("POST")
@@ -43,6 +44,8 @@ func (a *App) setRouters() {
 	private.HandleFunc("/order/status", getOrderStatus).Methods("POST")
 }
 
+// Run запускает слушающий сервер для принятия запросов и отключает приложение
+// от командной строки (демонизирует)
 func (a *App) Run(addr string) {
 	var err error
 	log.WithField("port", cfg.App.AppPort).Info("Starting server on port:")
@@ -79,6 +82,7 @@ func (a *App) Run(addr string) {
 	}
 }
 
+// init устанавливает формат вывода логов
 func init() {
 	log.SetFormatter(&log.TextFormatter{
 		FullTimestamp: true,
