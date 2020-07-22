@@ -114,8 +114,8 @@ func getOrderInfo(orderID string) string {
 		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
 		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
 		for _, box := range inputOrder.Order.Delivery.Shipments[0].Boxes {
-			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nДлина (в см): `%d`\nШирина (в см): `%d`\nВысота (в см): `%d`\nВес (в кг): `%.2f`\n",
-				box.FulfilmentID, box.Height, box.Width, box.Depth, float32(box.Weight)/1000)
+			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nВес и размеры: `%.2f` кг `%d/%d/%d` (длина, ширина, высота, в см)\n",
+				box.FulfilmentID, float32(box.Weight)/1000, box.Height, box.Width, box.Depth)
 		}
 		msgText += fmt.Sprintf("---------------------\nОбщая стоимость товаров (не включая доставку): `%.2f`\n", inputOrder.Order.ItemsTotal)
 		if inputOrder.Order.PaymentType == "PREPAID" {
