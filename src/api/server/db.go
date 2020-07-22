@@ -40,6 +40,10 @@ func createTables() {
 	queries = append(queries, `CREATE TABLE IF NOT EXISTS bot_clients (
 	chatId VARCHAR(128) NOT NULL
 		)`)
+	queries = append(queries, `CREATE TABLE IF NOT EXISTS shipments (
+	fulfilmentId VARCHAR(128) NOT NULL,
+	offerId		VARCHAR(128) NOT NULL
+		)`)
 
 	for _, query := range queries {
 		_, err := db.Exec(query)
@@ -50,6 +54,15 @@ func createTables() {
 			).Fatal("Failed to create tables!")
 		}
 	}
+}
+func addShipmentToDB(fulfilmentId string, offerId string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	tx.Exec(`INSERT INTO shipments (fulfilmentId, offerId) VALUES (?, ?)`, fulfilmentId, offerId)
+	err = tx.Commit()
+	return nil
 }
 
 // subscribeChatId записывает ID пользователя в БД, если тот подписался на

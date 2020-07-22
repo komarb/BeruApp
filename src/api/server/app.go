@@ -27,7 +27,7 @@ func (a *App) InitApp(config *config.Config) {
 	cfg = config
 	httpClient = createHTTPClient()
 	initDB()
-	go runBot()
+	//go runBot()
 	go initPeriodicUpdate()
 	a.Router = mux.NewRouter()
 	a.setRouters()

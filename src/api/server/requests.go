@@ -94,6 +94,7 @@ func getOpenOrders() string {
 			continue
 		}
 		ordersMsg += fmt.Sprintf("*+ Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n", order.ID, order.Status, order.Substatus, order.ID)
+		fmt.Printf("%#v", order.Delivery.Shipments[0])
 		openOrdersCount += 1
 	}
 	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", openOrdersCount)
@@ -104,25 +105,27 @@ func getOpenOrders() string {
 // getOpenOrders запрашивает у Беру информацию об определнном заказе по его ID
 func getOrderInfo(orderID string) string {
 	var inputOrder models.AcceptOrderRequest
+	var content models.Content
 	var msgText string
 	orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s.json", cfg.Beru.CampaignID, orderID)
 	resp := DoAuthRequest("GET", orderURL, nil)
 	json.NewDecoder(resp.Body).Decode(&inputOrder)
-	if resp.StatusCode == 404 || resp.StatusCode == 403 || inputOrder.Order.ID == 0{
+	if resp.StatusCode == 404 || resp.StatusCode == 403 || inputOrder.Order.ID == 0 {
 		msgText = "Заказ с таким ID *не найден*"
 	} else {
 		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
 		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
 		for _, box := range inputOrder.Order.Delivery.Shipments[0].Boxes {
-			var itemsPrice float32 = 0.0
+			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nВес и размеры: `%.2f` кг `%d/%d/%d`\n",
+				box.FulfilmentID, float32(box.Weight)/1000, box.Height, box.Width, box.Depth)
+			db.Get(&content, "SELECT * FROM shipments WHERE fulfilmentId=?", box.FulfilmentID)
 			for _, item := range inputOrder.Order.Items {
-				if item.ID == box.Items[0].ID {
-					itemsPrice = item.Price * float32(box.Items[0].Count)
+				if item.OfferID == content.OfferID {
+					msgText += fmt.Sprintf("Shop-SKU товара: `%s`, количество: `%s`, стоимость отправления: `%f`",
+						item.OfferID, item.Count, float32(item.Count) * item.Price)
 					break
 				}
 			}
-			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nВес и размеры: `%.2f` кг `%d/%d/%d`\nСтоимость товаров: %.2f",
-				box.FulfilmentID, float32(box.Weight)/1000, box.Height, box.Width, box.Depth, itemsPrice)
 		}
 		msgText += fmt.Sprintf("---------------------\nОбщая стоимость товаров (не включая доставку): `%.2f`\n", inputOrder.Order.ItemsTotal)
 		if inputOrder.Order.PaymentType == "PREPAID" {

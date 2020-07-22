@@ -20,3 +20,7 @@ type BoxItem struct {
 	ID 			int64		`json:"id"`
 	Count		int64		`json:"count"`
 }
+type Content struct {
+	FulfilmentID string `db:"fulfilmentId"`
+	OfferID string `db:"offerId"`
+}

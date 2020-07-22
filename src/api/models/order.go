@@ -20,7 +20,6 @@ type Delivery struct {
 }
 
 type Items struct {
-	ID      int64	`json:"id"`
 	OfferID string `json:"offerId"`
 	Count   int    `json:"count"`
 	Price   float32    `json:"price"`

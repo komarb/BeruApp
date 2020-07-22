@@ -49,6 +49,13 @@ func addBoxToShipment(item models.Items, shipment *models.Shipment, orderID int6
 	tempBox.Weight = int(item.Weight*1000)
 	tempBox.FulfilmentID = fmt.Sprintf("%d-%d", orderID, len(shipment.Boxes)+1)
 	shipment.Boxes = append(shipment.Boxes, tempBox)
+	err := addShipmentToDB(tempBox.FulfilmentID, item.OfferID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"function" : "addShipmentToDB",
+			"error"	:	err},
+		).Fatal("Failed to add shipment to DB!")
+	}
 }
 
 // getIdFromMsg возвращает ID из сообщения
