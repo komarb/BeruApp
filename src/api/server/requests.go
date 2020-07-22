@@ -121,7 +121,7 @@ func getOrderInfo(orderID string) string {
 			db.Get(&content, "SELECT * FROM shipments WHERE fulfilmentId=?", box.FulfilmentID)
 			for _, item := range inputOrder.Order.Items {
 				if item.OfferID == content.OfferID {
-					msgText += fmt.Sprintf("Shop-SKU товара: `%s`, количество: `%s`, стоимость отправления: `%f`",
+					msgText += fmt.Sprintf("Shop-SKU товара: `%s`, количество: `%d`, стоимость отправления: `%.2f`\n",
 						item.OfferID, item.Count, float32(item.Count) * item.Price)
 					break
 				}
