@@ -4,8 +4,7 @@ type Shipment struct {
 	Boxes []Boxes `json:"boxes"`
 }
 type Boxes struct {
-	ID			 int64	`json:"id, omitempty"`
-	FulfilmentID string `json:"fulfilmentId, omitempty"`
+	FulfilmentID string `json:"fulfilmentId"`
 	Weight       int    `json:"weight"`
 	Width        int    `json:"width"`
 	Height       int    `json:"height"`
