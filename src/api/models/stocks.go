@@ -9,8 +9,8 @@ type StocksResponse struct {
 }
 type StocksItems struct {
 	Type      string    `json:"type"`
-	Count     int64       `json:"count"`
-	UpdatedAt string 	`json:"updatedAt"`
+	Count     int64       `json:"count" db:"count"`
+	UpdatedAt string 	`json:"updatedAt" db:"updated_at"`
 }
 type Skus struct {
 	Sku         string  `json:"sku"`

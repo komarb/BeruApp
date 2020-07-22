@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // getItemsRelevantInfo отвечает на запрос со списком товаров релевантной информацией
@@ -171,37 +172,25 @@ func getOrderInfo(orderID string, chatID int64) {
 func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
 	var stocksRequest models.StocksRequest
 	var stocksResponse models.StocksResponse
-	var count int64
-	var updatedAt string
 
 	json.NewDecoder(r.Body).Decode(&stocksRequest)
 
-	err := db.Get(&updatedAt, "SELECT UPDATE_TIME FROM information_schema.tables WHERE TABLE_SCHEMA = 'xml2yml' AND TABLE_NAME = 'products'")
-	if err != nil {
-		log.WithFields(log.Fields{
-			"function": "db.Get",
-			"err":      err,
-		},
-		).Warn("Can't retrieve update time of products table")
-	}
-	updatedAt = strings.Replace(updatedAt, " ", "T", 1)
-	updatedAt += "+03:00"
 	for _, sku := range stocksRequest.Skus {
 		var tempSku models.Skus
 		var tempItem models.StocksItems
-		err := db.Get(&count, "SELECT count FROM products WHERE shop_sku=?", sku)
+		err := db.Get(&tempItem, "SELECT count, updated_at FROM products WHERE shop_sku=?", sku)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"function" : "db.Get",
 			},
 			).Warn("Can't retrieve count of shop_sku, returning 0")
-			count = 0
+			tempItem.Count = 0
+			tempItem.UpdatedAt = time.Now().Local().Format(time.RFC3339)
+			tempItem.UpdatedAt = strings.Replace(tempItem.UpdatedAt, "Z", "+", -1)
 		}
 		tempSku.Sku = sku
 		tempSku.WarehouseID = stocksRequest.WarehouseID
 
-		tempItem.UpdatedAt = updatedAt
-		tempItem.Count = count
 		tempItem.Type = "FIT"
 		tempSku.Items = append(tempSku.Items, tempItem)
 		stocksResponse.Skus = append(stocksResponse.Skus, tempSku)
