@@ -31,18 +31,19 @@ type Items struct {
 	Volume  int
 }
 type Order struct {
-	Currency      string   `json:"currency"`
-	Fake          bool     `json:"fake"`
-	ID            int64      `json:"id"`
-	ItemsTotal	  float32	`json:"itemsTotal"`
-	Status		  string	`json:"status"`
-	Substatus	  string	`json:"substatus"`
-	PaymentType   string   `json:"paymentType"`
-	PaymentMethod string   `json:"paymentMethod"`
-	TaxSystem     string   `json:"taxSystem"`
-	Total		  float32	`json:"total"`
-	Delivery      Delivery `json:"delivery"`
-	Items         []Items  `json:"items"`
+	CancelRequested bool		`json:"cancelRequested"`
+	Currency      	string   `json:"currency"`
+	Fake          	bool     `json:"fake"`
+	ID            	int64      `json:"id"`
+	ItemsTotal	  	float32	`json:"itemsTotal"`
+	Status		  	string	`json:"status"`
+	Substatus	  	string	`json:"substatus"`
+	PaymentType   	string   `json:"paymentType"`
+	PaymentMethod 	string   `json:"paymentMethod"`
+	TaxSystem     	string   `json:"taxSystem"`
+	Total		  	float32	`json:"total"`
+	Delivery      	Delivery `json:"delivery"`
+	Items         	[]Items  `json:"items"`
 }
 
 type ReplyOrderRequest struct {
