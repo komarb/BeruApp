@@ -18,6 +18,7 @@ File ```src/ITLabReports/api/config.json``` must contain next content:
     "appPort": "8080",
     "daemonMode": false | true,
     "httpsMode": false | true,
+    "testMode" : false | true,
     "crtDir" : "path to certificate",
     "keyDir" : "path to key"
   },

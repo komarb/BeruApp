@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
@@ -62,15 +61,15 @@ func UpdateStatusToShippedAll() {
 // sendShipmentsInfo создает грузовые места по заказу и отправляет информацию серверам Беру
 func sendShipmentsInfo(inputOrder models.AcceptOrderRequest) {
 	var shipment models.Shipment
-	items := inputOrder.Order.Items
-	getItemsDimensions(items)
-	for _, item := range items {
-		if item.Count > 1 && volume(item) < 1100 {
-			makeMultipleProductBox(&item)
-			addBoxToShipment(item, &shipment, inputOrder.Order.ID)
+	boxs := inputOrder.Order.Items
+	getItemsDimensions(boxs)
+	for _, box := range boxs {
+		if box.Count > 1 && volume(box) < 1100 {
+			makeMultipleProductBox(&box)
+			addBoxToShipment(box, &shipment, inputOrder.Order.ID)
 		} else {
-			for j := 0; j < item.Count; j++ {
-				addBoxToShipment(item, &shipment, inputOrder.Order.ID)
+			for j := 0; j < box.Count; j++ {
+				addBoxToShipment(box, &shipment, inputOrder.Order.ID)
 			}
 		}
 	}
@@ -84,22 +83,26 @@ func sendShipmentsInfo(inputOrder models.AcceptOrderRequest) {
 func getOpenOrders() string {
 	var inputOrders models.OpenOrdersRequest
 	var resultMsg string
+	var ordersMsg string
+	openOrdersCount := 0
 	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json?status=PROCESSING", cfg.Beru.CampaignID)
 	resp := DoAuthRequest("GET", URL, nil)
 
 	json.NewDecoder(resp.Body).Decode(&inputOrders)
-	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", len(inputOrders.Orders))
 	for _, order := range inputOrders.Orders {
-		if order.CancelRequested {
+		if order.CancelRequested || !cfg.App.TestMode && order.Fake{
 			continue
 		}
-		resultMsg += fmt.Sprintf("*Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n-----", order.ID, order.Status, order.Substatus, order.ID)
+		ordersMsg += fmt.Sprintf("*+ Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n", order.ID, order.Status, order.Substatus, order.ID)
+		openOrdersCount += 1
 	}
+	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", openOrdersCount)
+	resultMsg += ordersMsg
 	return resultMsg
 }
 
 // getOpenOrders запрашивает у Беру информацию об определнном заказе по его ID
-func getOrderInfo(orderID string, chatID int64) {
+func getOrderInfo(orderID string) string {
 	var inputOrder models.AcceptOrderRequest
 	var msgText string
 	orderURL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/%s.json", cfg.Beru.CampaignID, orderID)
@@ -108,23 +111,30 @@ func getOrderInfo(orderID string, chatID int64) {
 	if resp.StatusCode == 404 || resp.StatusCode == 403 || inputOrder.Order.ID == 0{
 		msgText = "Заказ с таким ID *не найден*"
 	} else {
-		msgText := fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
-		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n\n-----", inputOrder.Order.Status, inputOrder.Order.Substatus)
-		for i, item := range inputOrder.Order.Items {
-			msgText += fmt.Sprintf("_Товар №%d:_\nOfferID товара: `%s`\nКоличество: `%d`\nЦена за шутку: `%.2f`\nРазмеры(длина, ширина, высота в см): `%d/%d/%d`\nВес (в кг): `%.2f`",
-				i+1, item.OfferID, item.Count, item.Price, item.Length, item.Width, item.Height, item.Weight)
+		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
+		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
+		for _, box := range inputOrder.Order.Delivery.Shipments[0].Boxes {
+			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nДлина (в см): `%d`\nШирина (в см): `%d`\nВысота (в см): `%d`\nВес (в кг): `%.2f`\n",
+				box.FulfilmentID, box.Height, box.Width, box.Depth, float32(box.Weight)/1000)
 		}
-		msgText += fmt.Sprintf("*Общая стоимость товаров (не включая доставку): `%f`*", inputOrder.Order.ItemsTotal)
-		msgText += fmt.Sprintf("*Информация о доставке:*\n\n-----ID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
+		msgText += fmt.Sprintf("---------------------\nОбщая стоимость товаров (не включая доставку): `%.2f`\n", inputOrder.Order.ItemsTotal)
+		if inputOrder.Order.PaymentType == "PREPAID" {
+			msgText += "*Информация об оплате:* `оплачен`\n"
+		} else {
+			msgText += "*Информация об оплате:* `оплата при получении, "
+			switch inputOrder.Order.PaymentMethod {
+			case "CARD_ON_DELIVERY":
+				msgText += "банковской картой`\n"
+			case "CASH_ON_DELIVERY":
+				msgText += "наличными`\n"
+			}
+		}
+		msgText += fmt.Sprintf("*Информация о доставке:*\nID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
 		msgText += fmt.Sprintf("*Ссылка на скачивание ярлыков-наклеек на грузовые места:*\n/label%d", inputOrder.Order.ID)
 	}
-
-	msg := tgbotapi.NewMessage(chatID, msgText)
-	msg.ParseMode = "markdown"
-
 	// Кнопка отмены заказа
 	/*if inputOrder.Order.Substatus == "STARTED" || inputOrder.Order.Substatus == "READY_TO_SHIP" {
 		msg.ReplyMarkup = orderControlKeyboard
 	}*/
-	bot.Send(msg)
+	return msgText
 }

@@ -9,6 +9,7 @@ type AcceptOrderRequest struct {
 type Shipments struct {
 	ID           int    `json:"id"`
 	ShipmentDate string `json:"shipmentDate"`
+	Boxes []Boxes `json:"boxes"`
 }
 
 type Delivery struct {

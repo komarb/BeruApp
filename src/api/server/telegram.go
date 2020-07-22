@@ -117,7 +117,10 @@ func runBot() {
 				UpdateStatusToShippedAll()
 			default:
 				if strings.Contains(update.Message.Text, "/order") {
-					getOrderInfo(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
+					msgText := getOrderInfo(getIdFromMsg(update.Message.Text))
+					msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
+					msg.ParseMode = "markdown"
+					bot.Send(msg)
 				} else if strings.Contains(update.Message.Text, "/label") {
 					downloadLabels(getIdFromMsg(update.Message.Text), update.Message.Chat.ID)
 				} else if strings.Contains(update.Message.Text, "/shppd") {

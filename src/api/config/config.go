@@ -24,6 +24,7 @@ type AppConfig struct {
 	AppPort		string	`json:"appPort"`
 	DaemonMode	bool 	`json:"daemonMode"`
 	HttpsMode	bool	`json:"httpsMode"`
+	TestMode	bool	`json:"testMode"`
 	CrtDir		string	`json:"crtDir"`
 	KeyDir		string	`json:"keyDir"`
 }
