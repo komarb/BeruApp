@@ -116,22 +116,22 @@ func getOrderInfo(orderID string) string {
 		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
 		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
 		for _, box := range inputOrder.Order.Delivery.Shipments[0].Boxes {
-			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\nВес и размеры: `%.2f` кг `%d/%d/%d`\n",
+			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\n`%.2f` кг `%d/%d/%d`\n",
 				box.FulfilmentID, float32(box.Weight)/1000, box.Height, box.Width, box.Depth)
 			db.Get(&content, "SELECT * FROM shipments WHERE fulfilmentId=?", box.FulfilmentID)
 			for _, item := range inputOrder.Order.Items {
 				if item.OfferID == content.OfferID {
-					msgText += fmt.Sprintf("Shop-SKU товара: `%s`, количество: `%d`, стоимость отправления: `%.2f`\n",
-						item.OfferID, item.Count, float32(item.Count) * item.Price)
+					msgText += fmt.Sprintf("`%s`\n`%d` шт.\n`%.2f` ₽\n",
+						item.OfferID, content.Count, float32(content.Count) * item.Price)
 					break
 				}
 			}
 		}
-		msgText += fmt.Sprintf("---------------------\nОбщая стоимость товаров (не включая доставку): `%.2f`\n", inputOrder.Order.ItemsTotal)
+		msgText += fmt.Sprintf("---------------------\n`%.2f` ₽\n", inputOrder.Order.ItemsTotal)
 		if inputOrder.Order.PaymentType == "PREPAID" {
-			msgText += "*Информация об оплате:* `оплачен`\n"
+			msgText += "*Оплата:*\n`Оплачен`\n"
 		} else {
-			msgText += "*Информация об оплате:* `оплата при получении, "
+			msgText += "*Оплата:*`Оплата при получении, "
 			switch inputOrder.Order.PaymentMethod {
 			case "CARD_ON_DELIVERY":
 				msgText += "банковской картой`\n"
@@ -139,8 +139,8 @@ func getOrderInfo(orderID string) string {
 				msgText += "наличными`\n"
 			}
 		}
-		msgText += fmt.Sprintf("*Информация о доставке:*\nID посылки: `%d`\nДата отгрузки: `%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
-		msgText += fmt.Sprintf("*Ссылка на скачивание ярлыков-наклеек на грузовые места:*\n/label%d", inputOrder.Order.ID)
+		msgText += fmt.Sprintf("*Доставка:*\n`№%d`\n`%s`\n", inputOrder.Order.Delivery.Shipments[0].ID, inputOrder.Order.Delivery.Shipments[0].ShipmentDate)
+		msgText += fmt.Sprintf("*Ярлыки-наклейки:\n* /label%d", inputOrder.Order.ID)
 	}
 	// Кнопка отмены заказа
 	/*if inputOrder.Order.Substatus == "STARTED" || inputOrder.Order.Substatus == "READY_TO_SHIP" {

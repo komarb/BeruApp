@@ -23,4 +23,5 @@ type BoxItem struct {
 type Content struct {
 	FulfilmentID string `db:"fulfilmentId"`
 	OfferID string `db:"offerId"`
+	Count   int	`db:"count"`
 }

@@ -55,12 +55,12 @@ func createTables() {
 		}
 	}
 }
-func addShipmentToDB(fulfilmentId string, offerId string) error {
+func addShipmentToDB(fulfilmentId string, offerId string, count int) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
-	tx.Exec(`INSERT INTO shipments (fulfilmentId, offerId) VALUES (?, ?)`, fulfilmentId, offerId)
+	tx.Exec(`INSERT INTO shipments (fulfilmentId, offerId, count) VALUES (?, ?, ?)`, fulfilmentId, offerId, count)
 	err = tx.Commit()
 	return nil
 }

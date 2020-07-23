@@ -49,7 +49,7 @@ func addBoxToShipment(item models.Items, shipment *models.Shipment, orderID int6
 	tempBox.Weight = int(item.Weight*1000)
 	tempBox.FulfilmentID = fmt.Sprintf("%d-%d", orderID, len(shipment.Boxes)+1)
 	shipment.Boxes = append(shipment.Boxes, tempBox)
-	err := addShipmentToDB(tempBox.FulfilmentID, item.OfferID)
+	err := addShipmentToDB(tempBox.FulfilmentID, item.OfferID, item.Count)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"function" : "addShipmentToDB",
