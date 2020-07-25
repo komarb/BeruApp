@@ -69,7 +69,9 @@ func sendShipmentsInfo(inputOrder models.AcceptOrderRequest) {
 			addBoxToShipment(box, &shipment, inputOrder.Order.ID)
 		} else {
 			for j := 0; j < box.Count; j++ {
-				addBoxToShipment(box, &shipment, inputOrder.Order.ID)
+				tempBox := box
+				tempBox.Count = 1
+				addBoxToShipment(tempBox, &shipment, inputOrder.Order.ID)
 			}
 		}
 	}

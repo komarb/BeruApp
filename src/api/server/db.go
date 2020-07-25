@@ -42,7 +42,8 @@ func createTables() {
 		)`)
 	queries = append(queries, `CREATE TABLE IF NOT EXISTS shipments (
 	fulfilmentId VARCHAR(128) NOT NULL,
-	offerId		VARCHAR(128) NOT NULL
+	offerId		VARCHAR(128) NOT NULL,
+	count 		int
 		)`)
 
 	for _, query := range queries {
