@@ -70,3 +70,14 @@ type MultipleOrderStatus struct {
 	Status		  string	`json:"status"`
 	Substatus	  string	`json:"substatus"`
 }
+
+type OrderStatusReply struct {
+	Orders []OrdersReply `json:"orders"`
+}
+type OrdersReply struct {
+	ID           int    `json:"id"`
+	UpdateStatus string `json:"updateStatus"`
+	Status       string `json:"status,omitempty"`
+	Substatus    string `json:"substatus,omitempty"`
+	ErrorDetails string `json:"errorDetails,omitempty"`
+}

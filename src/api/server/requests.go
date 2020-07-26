@@ -35,27 +35,44 @@ func UpdateStatusToShippedAll() {
 	var readytoshipOrders models.OpenOrdersRequest
 	var orders models.MultipleOrderStatusRequest
 	var tempOrder models.MultipleOrderStatus
+	var reply models.OrderStatusReply
 	date := time.Now().Format("02-01-2006")
 	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/" +
 		"orders.json?status=PROCESSING&substatus=READY_TO_SHIP" +
 		"&supplierShipmentDateFrom=%s&supplierShipmentDateTo=%s", cfg.Beru.CampaignID, date, date)
 	resp := DoAuthRequest("GET", URL, nil)
 	json.NewDecoder(resp.Body).Decode(&readytoshipOrders)
-
 	for _, order := range readytoshipOrders.Orders {
 		tempOrder.ID = order.ID
 		tempOrder.Status = "PROCESSING"
 		tempOrder.Substatus = "SHIPPED"
 		orders.Orders = append(orders.Orders, tempOrder)
 		if len(orders.Orders) == 30 {
-			sendMultipleStatuses(orders)
+			resp := sendMultipleStatuses(orders)
+			json.NewDecoder(resp.Body).Decode(&reply)
+			for _, orderReply := range reply.Orders {
+				if orderReply.UpdateStatus == "ERROR" {
+					log.WithFields(log.Fields{
+						"orderId" : orderReply.ID,
+						"error":    orderReply.ErrorDetails},
+					).Warn("Order status wasn't set to SHIPPED!")
+				}
+			}
 			orders.Orders = nil
 		}
 	}
 	if len(orders.Orders) != 0 {
-		sendMultipleStatuses(orders)
+		resp := sendMultipleStatuses(orders)
+		json.NewDecoder(resp.Body).Decode(&reply)
+		for _, orderReply := range reply.Orders {
+			if orderReply.UpdateStatus == "ERROR" {
+				log.WithFields(log.Fields{
+					"orderId" : orderReply.ID,
+					"error":    orderReply.ErrorDetails},
+				).Warn("Order status wasn't set to SHIPPED!")
+			}
+		}
 	}
-	log.Info("Statuses updates done successfully")
 }
 
 // sendShipmentsInfo создает грузовые места по заказу и отправляет информацию серверам Беру
