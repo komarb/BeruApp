@@ -108,10 +108,6 @@ func sendStocksInfo(w http.ResponseWriter, r *http.Request) {
 		var tempItem models.StocksItems
 		err := db.Get(&tempItem, "SELECT count, updated_at FROM products WHERE shop_sku=?", sku)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"function" : "db.Get",
-			},
-			).Warn("Can't retrieve count of shop_sku, returning 0")
 			tempItem.Count = 0
 			tempItem.UpdatedAt = time.Now().Local().Format(time.RFC3339)
 			tempItem.UpdatedAt = strings.Replace(tempItem.UpdatedAt, "Z", "+", -1)
