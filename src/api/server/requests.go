@@ -96,7 +96,6 @@ func getOpenOrders() string {
 			continue
 		}
 		ordersMsg += fmt.Sprintf("*+ Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n", order.ID, order.Status, order.Substatus, order.ID)
-		fmt.Printf("%#v", order.Delivery.Shipments[0])
 		openOrdersCount += 1
 	}
 	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", openOrdersCount)
