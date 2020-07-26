@@ -25,7 +25,7 @@ func sendStatus(status string, substatus string, orderID string) *http.Response 
 func sendMultipleStatuses(orders models.MultipleOrderStatusRequest) *http.Response {
 	json, _ := json.Marshal(orders)
 	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders/status-update.json", cfg.Beru.CampaignID)
-	resp := DoAuthRequest("PUT", URL, bytes.NewBuffer(json))
+	resp := DoAuthRequest("POST", URL, bytes.NewBuffer(json))
 	return resp
 }
 
