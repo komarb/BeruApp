@@ -60,8 +60,7 @@ func runBot() {
 			case "doOrderCancellation":
 				doOrderCancellation(update.CallbackQuery.Message)
 			}
-		} else if update.Message.Document.FileName == "assortment.xlsm" {
-			log.Info("UPLOADING FILE")
+		} else if update.Message.Document != nil && update.Message.Document.FileName == "assortment.xlsm" {
 			err := saveDimsFile(update.Message.Document.FileID, update.Message.Document.FileName)
 			if err != nil {
 				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не удалось загрузить файл с размерами, попробуйте еще раз!")
