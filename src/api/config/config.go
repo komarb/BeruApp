@@ -27,6 +27,7 @@ type AppConfig struct {
 	TestMode	bool	`json:"testMode"`
 	CrtDir		string	`json:"crtDir"`
 	KeyDir		string	`json:"keyDir"`
+	DimsFilePath string	`json:"dimsFilePath"`
 }
 type BotConfig struct {
 	ApiToken	string	`json:"apiToken"`

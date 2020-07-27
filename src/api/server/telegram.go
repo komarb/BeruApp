@@ -50,7 +50,6 @@ func runBot() {
 	u.Timeout = 60
 
 	updates, err := bot.GetUpdatesChan(u)
-
 	for update := range updates {
 		if update.CallbackQuery != nil {
 			switch update.CallbackQuery.Data {
@@ -60,6 +59,16 @@ func runBot() {
 				undoOrderCancellation(update.CallbackQuery.Message)
 			case "doOrderCancellation":
 				doOrderCancellation(update.CallbackQuery.Message)
+			}
+		} else if update.Message.Document.FileName == "assortment.xlsm" {
+			log.Info("UPLOADING FILE")
+			err := saveDimsFile(update.Message.Document.FileID, update.Message.Document.FileName)
+			if err != nil {
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не удалось загрузить файл с размерами, попробуйте еще раз!")
+				bot.Send(msg)
+			} else {
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Файл с размерами успешно загружен!")
+				bot.Send(msg)
 			}
 		} else if reflect.TypeOf(update.Message.Text).Kind() == reflect.String && update.Message.Text != "" {
 			switch update.Message.Text {
@@ -116,6 +125,7 @@ func runBot() {
 			case "/shipAllOrders":
 				UpdateStatusToShippedAll()
 			default:
+				fmt.Printf("%#v", update.Message.Document)
 				if strings.Contains(update.Message.Text, "/order") {
 					msgText := getOrderInfo(getIdFromMsg(update.Message.Text))
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)

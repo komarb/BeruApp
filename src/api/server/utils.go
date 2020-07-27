@@ -4,6 +4,9 @@ import (
 	"beruAPI/models"
 	"fmt"
 	log "github.com/sirupsen/logrus"
+	"io"
+	"net/http"
+	"os"
 	"time"
 )
 
@@ -77,4 +80,45 @@ func initPeriodicUpdate() {
 		d = 24 * time.Hour
 		UpdateStatusToShippedAll()
 	}
+}
+
+// downloadFile скачивает файл по заданной ссылке и названию
+func downloadFile(URL string, fileName string) error {
+	resp, err := http.Get(URL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	out, err := os.Create(cfg.App.DimsFilePath+"/"+fileName)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return nil
+}
+
+// saveDimsFile сохраняет файл с размерами из Телеграма на диск
+func saveDimsFile(fileID string, fileName string) error {
+	url, err := bot.GetFileDirectURL(fileID)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"function" : "saveDimsFile",
+			"error"	:	err},
+		).Warn("Failed to download dimension file from telegram!")
+		return err
+	}
+	err = downloadFile(url, fileName)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"function" : "downloadFile",
+			"url" : url,
+			"error"	:	err,
+		},
+		).Fatal("Can't download file!")
+		return err
+	}
+	return nil
 }
