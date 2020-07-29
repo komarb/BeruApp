@@ -125,7 +125,7 @@ func getOpenOrders() string {
 		}
 		if currentDate != order.Delivery.Shipments[0].ShipmentDate {
 			currentDate = order.Delivery.Shipments[0].ShipmentDate
-			ordersMsg += fmt.Sprintf("------------------------------------------------\n▪️ *%s*\n", currentDate)
+			ordersMsg += fmt.Sprintf("▪️ *%s*\n", currentDate)
 		}
 		ordersMsg += fmt.Sprintf("_Заказ №%d_\n`%s`\n", order.ID, order.Substatus)
 		for _, item := range order.Items {
