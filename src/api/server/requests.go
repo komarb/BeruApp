@@ -7,6 +7,7 @@ import (
 	"fmt"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"sort"
 	"time"
 )
 
@@ -107,19 +108,34 @@ func getOpenOrders() string {
 	var inputOrders models.OpenOrdersRequest
 	var resultMsg string
 	var ordersMsg string
+	var currentDate string
 	openOrdersCount := 0
 	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json?status=PROCESSING", cfg.Beru.CampaignID)
 	resp := DoAuthRequest("GET", URL, nil)
 
 	json.NewDecoder(resp.Body).Decode(&inputOrders)
+	sort.Slice(inputOrders.Orders, func(i, j int) bool {
+		date1 := inputOrders.Orders[i].Delivery.Shipments[0].ShipmentDate
+		date2 := inputOrders.Orders[j].Delivery.Shipments[0].ShipmentDate
+		return date1 < date2
+	})
 	for _, order := range inputOrders.Orders {
 		if order.CancelRequested || !cfg.App.TestMode && order.Fake{
 			continue
 		}
-		ordersMsg += fmt.Sprintf("*+ Заказ №%d*\n*Статус:* %s, *субстатус:* %s\nПодробнее о заказе: /order%d\n\n", order.ID, order.Status, order.Substatus, order.ID)
+		if currentDate != order.Delivery.Shipments[0].ShipmentDate {
+			currentDate = order.Delivery.Shipments[0].ShipmentDate
+			ordersMsg += fmt.Sprintf("------------------------------------------------\n▪️ *%s*\n", currentDate)
+		}
+		ordersMsg += fmt.Sprintf("_Заказ №%d_\n`%s`\n", order.ID, order.Substatus)
+		for _, item := range order.Items {
+			ordersMsg += fmt.Sprintf("`%s`\n`%d` шт.\n",
+					item.OfferID, item.Count)
+		}
+		ordersMsg += fmt.Sprintf("Подробнее: /order%d\n\n", order.ID)
 		openOrdersCount += 1
 	}
-	resultMsg += fmt.Sprintf("Всего заказов: %d\n\n", openOrdersCount)
+	resultMsg += fmt.Sprintf("Всего заказов: `%d`\n\n", openOrdersCount)
 	resultMsg += ordersMsg
 	return resultMsg
 }
@@ -136,7 +152,7 @@ func getOrderInfo(orderID string) string {
 		msgText = "Заказ с таким ID *не найден*"
 	} else {
 		msgText = fmt.Sprintf("*Заказ №%d:*\n", inputOrder.Order.ID)
-		msgText += fmt.Sprintf("*Статус заказа:* %s, субстатус: %s\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
+		msgText += fmt.Sprintf("*Статус заказа:* `%s`\n*Субстатус:* `%s`\n---------------------\n", inputOrder.Order.Status, inputOrder.Order.Substatus)
 		for _, box := range inputOrder.Order.Delivery.Shipments[0].Boxes {
 			msgText += fmt.Sprintf("+ _Грузовое место №%s:_\n`%.2f` кг `%d/%d/%d`\n",
 				box.FulfilmentID, float32(box.Weight)/1000, box.Height, box.Width, box.Depth)

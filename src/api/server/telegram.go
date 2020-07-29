@@ -124,7 +124,6 @@ func runBot() {
 			case "/shipAllOrders":
 				UpdateStatusToShippedAll()
 			default:
-				fmt.Printf("%#v", update.Message.Document)
 				if strings.Contains(update.Message.Text, "/order") {
 					msgText := getOrderInfo(getIdFromMsg(update.Message.Text))
 					msg := tgbotapi.NewMessage(update.Message.Chat.ID, msgText)
