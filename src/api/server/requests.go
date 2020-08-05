@@ -110,7 +110,7 @@ func getOpenOrders() string {
 	var ordersMsg string
 	var currentDate string
 	openOrdersCount := 0
-	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json?status=PROCESSING", cfg.Beru.CampaignID)
+	URL := fmt.Sprintf("https://api.partner.market.yandex.ru/v2/campaigns/%s/orders.json?substatus=READY_TO_SHIP", cfg.Beru.CampaignID)
 	resp := DoAuthRequest("GET", URL, nil)
 
 	json.NewDecoder(resp.Body).Decode(&inputOrders)
